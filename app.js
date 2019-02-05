@@ -99,14 +99,23 @@ app.post("/compose", function(req, res){
          title: blogTitle,
          post: blogPost
        });
-
-       newPost.save();
-
-       blog.posts.push(newPost);
-
-       blog.save(function(err){
+       //Prevents duplicate blog posts with the same name to be created
+       Post.findOne({title: newPost.title}, function (err, post){
          if (!err){
-           res.redirect("/");
+           if (!post)
+           {
+             newPost.save();
+             blog.posts.push(newPost);
+             blog.save(function(err){
+               if (!err){
+                 res.redirect("/");
+               }
+             });
+           } else{
+             console.log("There's already a post with this name");
+           }
+         } else {
+           console.log("We experienced an error");
          }
        });
      }
@@ -115,10 +124,7 @@ app.post("/compose", function(req, res){
 });
 
 
-//If the user would like to go to a certain post; they would have to enter
-//"localhost:3000/posts/<article name>"". The "postName" parameter represents the
-//name of the article. The callback function then uses "postName" to locate
-//the post the user would like to see.
+//The user can access the blog post with the blog's ID or it's title
 app.get("/posts/:postName", function(req, res){
   const requestedTitle = _.lowerCase(req.params.postName);
 
@@ -132,14 +138,25 @@ app.get("/posts/:postName", function(req, res){
           });
         }
     }
-    else {
-      {
-        console.log("No match found");
-      }
+    else  {
+      const requestedId = req.params.postName;
+      Post.findOne({_id: requestedId}, function(err,post){
+        if (!err){
+          if (post){
+            res.render("post", {
+              title: post.title,
+              content: post.post
+            });
+          } else {
+            console.log("No post was found");
+          }
+        }
+      });
     }
   }
 });
 });
+
 
 //This function makes the first post
 let makeHomePost = function(){
